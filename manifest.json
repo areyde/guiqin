@@ -4,21 +4,20 @@
   "description": "Guiqin (桂琴) is a Google Chrome extension for checking the learning status of Chinese words and their basic statistics.",
   "version": "1.0",
   "permissions": [
-    "contextMenus",
     "activeTab",
-    "storage"
+    "contextMenus",
+    "scripting"
   ],
   "background": {
     "service_worker": "background.js"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"]
-    }
-  ],
   "action": {
     "default_popup": "popup.html",
     "default_icon": "icon.png"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
   }
 }
