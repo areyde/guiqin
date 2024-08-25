@@ -4,12 +4,50 @@ try {
     console.error('Failed to load PapaParse:', e);
 }
 
-const sheetConfig = {
-    "My words": { word: 7, pronunciation: 9, meaning: 10, frequency: 2, hsk2: 5, hsk3: 6 },
-    "All Words (Frequency)": { word: 2, frequency: 3, hsk2: 6, hsk3: 7  },
-    "My characters": { character: 9, traditional: 10, pronunciation: 11, meaning: 16, frequency: 2, standard: 3, hsk2: 6, hsk3: 7 },
-    "All Characters (Frequency)": { character: 10, pronunciation: 11, meaning: 14, frequency: 2, standard: 3, hsk2: 7, hsk3: 8 }
+let cachedData = {
+    "All Words (Frequency)": null,
+    "All Characters (Frequency)": null
 };
+let cacheTimer = null;
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.action === "loadCache") {
+        loadDataToCache();
+    } else if (message.action === "clearCache") {
+        clearCache();
+    }
+});
+
+async function loadDataToCache() {
+    console.log("Loading data to cache...")
+    cachedData["All Words (Frequency)"] = await fetchCSVData("All Words (Frequency)");
+    cachedData["All Characters (Frequency)"] = await fetchCSVData("All Characters (Frequency)");
+    resetCacheTimer();
+    console.log(`Cache loaded... Timer is ${cacheTimer}`)
+}
+
+function clearCache() {
+    console.log("Clearing cache...")
+    cachedData["All Words (Frequency)"] = null;
+    cachedData["All Characters (Frequency)"] = null;
+    clearTimeout(cacheTimer);
+    cacheTimer = null;
+    console.log("Cache cleared...")
+}
+
+function resetCacheTimer() {
+    clearTimeout(cacheTimer);
+    cacheTimer = setTimeout(clearCache, 1800000); // 30 minutes
+}
+
+async function fetchCSVData(sheetName) {
+    console.log("Fetching data to cache...")
+    const sheetId = "1SxoqHYYJOBF0TBHHkFJfwIR6RuQzfbr5c4wXn8cR54M";
+    const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
+    const response = await fetch(url);
+    console.log(`Fetched data to cache... Timer is ${cacheTimer}`)
+    return response.text();
+}
 
 chrome.runtime.onInstalled.addListener(() => {
     chrome.contextMenus.create({
@@ -141,7 +179,7 @@ function displayResultDirectly(resultText) {
                 break;
         }
     } else {
-        if (data.searchType == "character") {
+        if (data.searchType === "character") {
             content.innerHTML = `🤯 Either this is not a Chinese character or it is so rare it is not even in our database.`
         }
         else {
@@ -171,36 +209,48 @@ function displayResultDirectly(resultText) {
     }, { capture: true, once: true });
 }
 
+function processData(csvText, word) {
+    const rows = Papa.parse(csvText, { header: false, skipEmptyLines: true, dynamicTyping: true }).data;
+    const normalizedWord = word.trim().normalize("NFC");
+    return rows.find(row => row.some(cell => String(cell).normalize("NFC") === normalizedWord)) || null;
+}
+
 async function lookupWordInCSV(word, sheetName) {
     console.log(`Looking up word '${word}' in sheet: ${sheetName}`);
     const sheetId = "1SxoqHYYJOBF0TBHHkFJfwIR6RuQzfbr5c4wXn8cR54M";
     const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${sheetName}`;
 
-    try {
-        const response = await fetch(url);
-        const csvText = await response.text();
+    if (cachedData[sheetName]) {
+        console.log(`Using cache... Timer is ${cacheTimer}`)
+        return processData(cachedData[sheetName], word);
+    } else {
+        console.log("Not using cash...")
+        try {
+            const response = await fetch(url);
+            const csvText = await response.text();
 
-        // Use PapaParse to parse the CSV
-        const rows = Papa.parse(csvText, {
-            header: false,
-            skipEmptyLines: true,
-            dynamicTyping: true
-        }).data;
+            // Use PapaParse to parse the CSV
+            const rows = Papa.parse(csvText, {
+                header: false,
+                skipEmptyLines: true,
+                dynamicTyping: true
+            }).data;
 
-        console.log("CSV data fetched and parsed:", rows);
+            console.log("CSV data fetched and parsed:", rows);
 
-        const normalizedWord = word.trim().normalize("NFC");
+            const normalizedWord = word.trim().normalize("NFC");
 
-        // Search for the word in the cleaned rows
-        const matchingRow = rows.find(row =>
-            row.some(cell => String(cell).normalize("NFC") === normalizedWord)
-        );
+            // Search for the word in the cleaned rows
+            const matchingRow = rows.find(row =>
+                row.some(cell => String(cell).normalize("NFC") === normalizedWord)
+            );
 
-        console.log("Final row:", matchingRow);
+            console.log("Final row:", matchingRow);
 
-        return matchingRow ? matchingRow : null;
-    } catch (error) {
-        console.error("Error fetching CSV data:", error);
-        return null;
+            return matchingRow ? matchingRow : null;
+        } catch (error) {
+            console.error("Error fetching CSV data:", error);
+            return null;
+        }
     }
 }
