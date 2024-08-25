@@ -15,8 +15,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         loadDataToCache();
     } else if (message.action === "clearCache") {
         clearCache();
+    } else if (message.action === "getCacheStatus") {
+        sendCacheStatus();
     }
 });
+
+function sendCacheStatus() {
+    const status = cachedData["All Words (Frequency)"] !== null || cachedData["All Characters (Frequency)"] !== null;
+    chrome.runtime.sendMessage({action: "updateStatus", status: status});
+}
 
 async function loadDataToCache() {
     console.log("Loading data to cache...")
@@ -79,7 +86,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
     };
 
     chrome.scripting.executeScript({
-        target: { tabId: tab.id },
+        target: {tabId: tab.id},
         function: displayResultDirectly,
         args: [JSON.stringify(resultData)]
     });
@@ -90,7 +97,7 @@ function displayResultDirectly(resultText) {
     try {
         data = JSON.parse(resultText);
     } catch (e) {
-        data = { result: resultText, sheetName: null, searchType: 'word' }; // Default to 'word' if parsing fails
+        data = {result: resultText, sheetName: null, searchType: 'word'}; // Default to 'word' if parsing fails
     }
 
     const selection = window.getSelection();
@@ -127,7 +134,7 @@ function displayResultDirectly(resultText) {
         </div>`;
                 break;
             case "All Words (Frequency)":
-                if (parseInt(data.result[2]) <= 5000 || data.result[6] !== null || data.result[7] !== null ) {
+                if (parseInt(data.result[2]) <= 5000 || data.result[6] !== null || data.result[7] !== null) {
                     content.innerHTML = `
         <div>
             🎓 You haven't learned this word but <strong style="color:#8B0000">need to</strong>!<br><br>
@@ -137,8 +144,7 @@ function displayResultDirectly(resultText) {
             <strong>HSK 3.0 band:</strong> ${data.result[7] ? data.result[7] : "—"}
         </div>`;
                     break;
-                }
-            else {
+                } else {
                     content.innerHTML = `
         <div>
             🧠 You haven't learned this word but <strong style="color:#040273">don't need to</strong>, it's rare!<br><br>
@@ -181,8 +187,7 @@ function displayResultDirectly(resultText) {
     } else {
         if (data.searchType === "character") {
             content.innerHTML = `🤯 Either this is not a Chinese character or it is so rare it is not even in our database.`
-        }
-        else {
+        } else {
             content.innerHTML = `🤯 Either this is not a Chinese word or it is so rare it is not even in our database.`
         }
     }
@@ -196,21 +201,21 @@ function displayResultDirectly(resultText) {
     closeButton.style.border = "none";
     closeButton.style.background = "none";
     closeButton.style.cursor = "pointer";
-    closeButton.onclick = function() {
+    closeButton.onclick = function () {
         bubble.remove();
     };
 
     bubble.appendChild(closeButton);
 
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
         if (!bubble.contains(event.target)) {
             bubble.remove();
         }
-    }, { capture: true, once: true });
+    }, {capture: true, once: true});
 }
 
 function processData(csvText, word) {
-    const rows = Papa.parse(csvText, { header: false, skipEmptyLines: true, dynamicTyping: true }).data;
+    const rows = Papa.parse(csvText, {header: false, skipEmptyLines: true, dynamicTyping: true}).data;
     const normalizedWord = word.trim().normalize("NFC");
     return rows.find(row => row.some(cell => String(cell).normalize("NFC") === normalizedWord)) || null;
 }
