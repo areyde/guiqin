@@ -117,7 +117,7 @@ function displayResultDirectly(resultText) {
             case "My words":
                 content.innerHTML = `
         <div>
-            🥳 You already learned this word!<br><br>
+            🥳 You <strong style="color:#02590f">already learned</strong> this word!<br><br>
             <strong>Word:</strong> ${data.result[7]}<br>
             <strong>Pronunciation:</strong> ${data.result[9]}<br>
             <strong>Meaning:</strong> ${data.result[10]}<br><br>
@@ -130,7 +130,7 @@ function displayResultDirectly(resultText) {
                 if (parseInt(data.result[2]) <= 5000 || data.result[6] !== null || data.result[7] !== null ) {
                     content.innerHTML = `
         <div>
-            🎓 You haven't learned this word but need to!<br><br>
+            🎓 You haven't learned this word but <strong style="color:#8B0000">need to</strong>!<br><br>
             <strong>Word:</strong> ${data.result[2]}<br><br>
             <strong>Frequency:</strong> ${data.result[3]}<br>
             <strong>HSK 2.0 level:</strong> ${data.result[6] ? data.result[6] : "—"}<br>
@@ -138,10 +138,10 @@ function displayResultDirectly(resultText) {
         </div>`;
                     break;
                 }
-                else {
+            else {
                     content.innerHTML = `
         <div>
-            🧠 You haven't learned this word but don't need to, it's rare!<br><br>
+            🧠 You haven't learned this word but <strong style="color:#040273">don't need to</strong>, it's rare!<br><br>
             <strong>Word:</strong> ${data.result[2]}<br><br>
             <strong>Frequency:</strong> ${data.result[3]}<br>
             <strong>HSK 2.0 level:</strong> ${data.result[6] ? data.result[6] : "—"}<br>
@@ -152,7 +152,7 @@ function displayResultDirectly(resultText) {
             case "My characters":
                 content.innerHTML = `
         <div>
-            🥳 You already learned this character!<br><br>
+            🥳 You <strong style="color:#02590f">already learned</strong> this character!<br><br>
             <strong>Character:</strong> ${data.result[9]}<br>
             <strong>Traditional:</strong> ${data.result[10] ? data.result[10] : "—"}<br>
             <strong>Pronunciation:</strong> ${data.result[11]}<br>
@@ -166,7 +166,7 @@ function displayResultDirectly(resultText) {
             case "All Characters (Frequency)":
                 content.innerHTML = `
         <div>
-            🎓 You haven't yet learned this character!<br><br>
+            🎓 You <strong style="color:#8B0000">haven't yet learned</strong> this character!<br><br>
             <strong>Character:</strong> ${data.result[10]}<br>
             <strong>Pronunciation:</strong> ${data.result[11]}<br>
             <strong>Meaning:</strong> ${data.result[14]}<br><br>
