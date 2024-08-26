@@ -5,36 +5,65 @@ try {
 }
 
 let cachedData = {
+    "My words": null,
+    "My characters": null,
     "All Words (Frequency)": null,
     "All Characters (Frequency)": null
 };
 let cacheTimer = null;
+let isLoading = false;
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message.action === "loadCache") {
-        loadDataToCache();
+        loadDataToCache().then(() => sendCacheStatus());
     } else if (message.action === "clearCache") {
         clearCache();
+        sendCacheStatus();
     } else if (message.action === "getCacheStatus") {
         sendCacheStatus();
     }
 });
 
 function sendCacheStatus() {
-    const status = cachedData["All Words (Frequency)"] !== null || cachedData["All Characters (Frequency)"] !== null;
-    chrome.runtime.sendMessage({action: "updateStatus", status: status});
+    const isLoaded = Object.values(cachedData).some(value => value !== null);
+    chrome.runtime.sendMessage({
+        action: "updateStatus",
+        status: isLoaded,
+        isLoading: isLoading
+    });
 }
 
 async function loadDataToCache() {
-    console.log("Loading data to cache...")
-    cachedData["All Words (Frequency)"] = await fetchCSVData("All Words (Frequency)");
-    cachedData["All Characters (Frequency)"] = await fetchCSVData("All Characters (Frequency)");
-    resetCacheTimer();
-    console.log(`Cache loaded... Timer is ${cacheTimer}`)
+    isLoading = true;  // Indicate that loading has started
+    sendCacheStatus(); // Send loading status to popup
+
+    try {
+        const dataPromises = [
+            fetchCSVData("My words"),
+            fetchCSVData("My characters"),
+            fetchCSVData("All Words (Frequency)"),
+            fetchCSVData("All Characters (Frequency)")
+        ];
+        const results = await Promise.all(dataPromises);
+
+        const keys = ["My words", "My characters", "All Words (Frequency)", "All Characters (Frequency)"];
+        results.forEach((result, index) => {
+            cachedData[keys[index]] = result;
+        });
+
+        resetCacheTimer();
+    } catch (error) {
+        console.error("Failed to load data to cache:", error);
+    }
+
+    isLoading = false;  // Loading complete
+    sendCacheStatus();  // Send the final loaded status
 }
 
 function clearCache() {
     console.log("Clearing cache...")
+    cachedData["My words"] = null;
+    cachedData["My characters"] = null;
     cachedData["All Words (Frequency)"] = null;
     cachedData["All Characters (Frequency)"] = null;
     clearTimeout(cacheTimer);

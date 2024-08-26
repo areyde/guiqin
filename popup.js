@@ -1,24 +1,35 @@
+// Initial setup for the status text
+document.addEventListener('DOMContentLoaded', () => {
+    updateStatus("Checking status...", "#666666");  // Blue color for neutral initial status
+});
+
 document.getElementById('loadCache').addEventListener('click', async () => {
+    updateStatus("Loading...", "#040273");  // Immediately show loading status on action
     chrome.runtime.sendMessage({ action: "loadCache" });
 });
 
 document.getElementById('clearCache').addEventListener('click', () => {
+    updateStatus("Clearing...", "#040273");  // Immediately show clearing status on action
     chrome.runtime.sendMessage({ action: "clearCache" });
 });
 
-// Request the current cache status on popup open
+function updateStatus(text, color) {
+    const status = document.getElementById('status');
+    status.textContent = text;
+    status.style.color = color;
+}
+
+// Request the current cache status when the popup opens
 chrome.runtime.sendMessage({ action: "getCacheStatus" });
 
-// Listen for responses from the background script
+// Handle messages from the background script
 chrome.runtime.onMessage.addListener((message) => {
     if (message.action === "updateStatus") {
-        const status = document.getElementById('status');
-        if (message.status) {
-            status.textContent = "Loaded";
-            status.style.color = "#02590f";
+        if (message.isLoading) {
+            updateStatus("Loading...", "#040273");
         } else {
-            status.textContent = "Not Loaded";
-            status.style.color = "#8B0000";
+            const color = message.status ? "#02590f" : "#8B0000";  // Loaded in green, not loaded in red
+            updateStatus(message.status ? "Loaded" : "Not Loaded", color);
         }
     }
 });
